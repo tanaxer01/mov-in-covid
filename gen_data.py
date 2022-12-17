@@ -123,7 +123,7 @@ def clean_df51() -> (pd.DataFrame, pd.DataFrame):
     '''
     def parse_diff(target_diff):
         diff_arr = [ int(i) for i in target_diff[1:-2].replace('%','').split(",") ]
-        return (100 + diff_arr/2)/ 100
+        return (100 + sum(diff_arr)/2)/ 100
 
     data_product51 = pd.read_csv("./datos/dp51_difs.csv", parse_dates=["Fecha"])
     # Just RM
@@ -197,7 +197,7 @@ def generate_ctx() -> dict:
             'casos_nuevos':     clean_dp1(),
             'pcrs_realizados':  clean_df7(),
             'camas_criticas':   clean_df20(),
-            'IM_entrada_prom':  entrada_prom,
-            'IM_salida_comuna': salida,
+            'im_entrada_prom':  entrada_prom,
+            'im_salida':        salida,
             'paso_a_paso':      cuarentenas
     }
