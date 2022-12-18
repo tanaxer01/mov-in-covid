@@ -20,8 +20,9 @@ def create_dataframe(comuna, ctx):
     '''
     todas_comunas = list( ctx['casos_nuevos'].drop(columns=[comuna, 'san pedro']) )
 
-    movi = {"movi-"+i:  ctx["im_salida"][i].shift(periods=20)  for i in todas_comunas + [comuna]}
-    paso = {"paso-"+i:  ctx["paso_a_paso"][i].shift(periods=4) for i in todas_comunas + [comuna]}
+    movi = {"movi-"+i:  ctx["im_salida"][i].shift(periods=1)  for i in todas_comunas + [comuna]}
+    # inim = {"inim-"+i:  ctx["im_entrada_prom"][i].shift(periods=1)  for i in todas_comunas + [comuna]}
+    paso = {"paso-"+i:  ctx["paso_a_paso"][i].shift(periods=1) for i in todas_comunas + [comuna]}
     covd = {"covd-"+i : ctx["casos_nuevos"][i].shift() for i in todas_comunas }
     cnst = {
         "pcrs_realizados": ctx["pcrs_realizados"],
@@ -39,10 +40,10 @@ def create_dataframe(comuna, ctx):
     return all_data
 
 def split_data(comuna, data_comuna, test_size=0.6):
-    ''' 
+    '''
     Divide los datos entre info de los datos de
     entrenamiento y los datos disponibles para
-    utilizar. 
+    utilizar.
 
     out vars
     ------------
@@ -58,7 +59,7 @@ def split_data(comuna, data_comuna, test_size=0.6):
         x_val, y_val, test_size=test_size,random_state=42
     )
 
-    return (x_train, y_train), (x_test, y_test) 
+    return (x_train, y_train), (x_test, y_test)
 
 def train_model(reg, x_train, y_train, x_test, y_test):
     '''
@@ -78,6 +79,12 @@ def train_model(reg, x_train, y_train, x_test, y_test):
 
     return reg
 
+def sort_data(split_data):
+    '''Sorts the info present in split data'''
+    for i, (j, k) in split_data.items():
+        split_data[i] = ( [jj.sort_index() for jj in j ], [ kk.sort_index() for kk in k ])
+
+
 if __name__ == "__main__":
     # CSV -> Pandas
     contexto = generate_ctx()
@@ -89,9 +96,11 @@ if __name__ == "__main__":
     splits_comunas  = { i: split_data(i, j) for i, j in df_comunas.items() }
     # Entrenamiento de los modelos
     modelos_comunas = {
-        c : train_model(MLPRegressor(random_state=1, max_iter=500),*i, *j) for c, (i, j) in splits_comunas.items() 
-        # c:train_model(LinearRegression(),*i, *j) for c, (i, j) in splits_comunas.items() 
+        c : train_model(MLPRegressor(random_state=1, max_iter=500),*i, *j) for c, (i, j) in splits_comunas.items()
+        # c:train_model(LinearRegression(),*i, *j) for c, (i, j) in splits_comunas.items()
     }
+
+    sort_data(splits_comunas)
 
     # Ej. 1 - Predict de todos los datos
     print(len(modelos_comunas['santiago'].predict(splits_comunas['santiago'][1][0])))
