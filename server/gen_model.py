@@ -1,45 +1,94 @@
-from sklearn.metrics         import mean_squared_error, mean_absolute_error, r2_score
+import os
+import pandas as pd
 from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.linear_model    import LinearRegression
-import pandas as pd
+from sklearn.neural_network  import MLPRegressor
+from gen_data import generate_ctx
 
-def train_comuna(nombre, ctx, train_ratio=0.4):
-    curr_data = pd.DataFrame({
-        "nuevos_contagios":  (ctx['casos_nuevos'])[nombre],
-        "previos_contagios": (ctx['casos_nuevos'])[nombre].shift(),
-        "pcrs_realizados":   ctx['pcrs_realizados'],
-        "camas_ocupadas":    ctx['camas_criticas'].ocupados,
-        "variacion_salidas": (ctx['im_salida'])[nombre],
-        "paso_comuna":       (ctx['paso_a_paso'])[nombre]
-    }).iloc[1:]
+DEBUG = os.getenv('DEBUG') is not None
 
-    # 1. Filtrar x fechas
-    start_date, end_date = max([ i.index.min() for i in ctx.values() ]), min([ i.index.max() for i in ctx.values() ])
-    curr_data = curr_data.loc[start_date:end_date]
-    # 2 Interpolar datos faltantes
-    curr_data["nuevos_contagios"] = curr_data["nuevos_contagios"].interpolate(limit=3)
-    curr_data["variacion_salidas"] = curr_data["variacion_salidas"].interpolate(limit=3)
-    curr_data["paso_comuna"]      = curr_data["paso_comuna"].fillna(method='ffill')
+def create_dataframe(comuna, ctx):
+    '''
+    Crea el dataset necesario para entrenar un modelo de la comuna especificada.
+    out vars
+    ------------
+    all_data: Dataset generado.
+    '''
+    todas_comunas = list( ctx['casos_nuevos'].drop(columns=[comuna, 'san pedro']) )
 
-    curr_data = curr_data.dropna()
-    curr_data = (curr_data - curr_data.mean()) / curr_data.std()
+    movi = {"movi-"+i:  ctx["im_salida"][i].shift(periods=20)  for i in todas_comunas + [comuna]}
+    paso = {"paso-"+i:  ctx["paso_a_paso"][i].shift(periods=4) for i in todas_comunas + [comuna]}
+    covd = {"covd-"+i : ctx["casos_nuevos"][i].shift() for i in todas_comunas }
+    cnst = {
+        "pcrs_realizados": ctx["pcrs_realizados"],
+        "covd-"+comuna:  ctx["casos_nuevos"][comuna]
+    }
 
-    split_index = round(curr_data.shape[0] * train_ratio)
+    all_data = pd.DataFrame({**movi, **paso, **covd, **cnst}).iloc[20:]
 
+    start_date = max((max(( j.index.min() for j in i.values() )) for i in [paso,covd,movi,cnst]))
+    end_date   = min((min(( j.index.max() for j in i.values() )) for i in [paso,covd,movi,cnst]))
+
+    all_data = all_data[start_date:end_date].interpolate(limit=3).dropna()
+    all_data = (all_data - all_data.mean())/all_data.std()
+
+    return all_data
+
+def split_data(comuna, data_comuna, test_size=0.6):
+    ''' 
+    Divide los datos entre info de los datos de
+    entrenamiento y los datos disponibles para
+    utilizar. 
+    out vars
+    ------------
+    (x_train, y_train): Datos de entrenamiento.
+    (x_test, y_test):   Datos para predicciones y
+    valores reales de estos.
+    '''
+    x_val = data_comuna.drop(columns=["covd-"+comuna])
+    y_val = data_comuna['covd-'+comuna]
+
+    x_train, x_test, y_train, y_test = train_test_split(
+        x_val, y_val, test_size=test_size,random_state=42
+    )
+
+    return (x_train, y_train), (x_test, y_test) 
+
+def train_model(reg, x_train, y_train, x_test, y_test):
+    '''
+    Entrena el modelo indicado y calcula el cross val score
+    si DEBUG == 1
+    out vars
+    --------
+    reg: Modelo entrenado
+    '''
     reg = LinearRegression(fit_intercept=False)
-    reg.fit(curr_data.drop(columns="nuevos_contagios").iloc[:split_index] , curr_data["nuevos_contagios"].iloc[:split_index])
+    reg.fit(x_train.values, y_train)
+
+    if DEBUG:
+        scores = cross_val_score(reg, x_test, y_test, cv=10)
+        print(f"cross_val: {scores.mean():.3f} accuracy with a std of {scores.std():.3f}")
 
     return reg
 
-def train_all(ctx, train_ratio=0.4):
-    # print(ctx.keys())
-    # print(ctx['casos_nuevos'].columns)
-    comunas = ctx['casos_nuevos'].columns.values
-    regs = {}
-    for i in comunas:
-        if i in ['san pedro']:
-            continue
+if __name__ == "__main__":
+    # CSV -> Pandas
+    contexto = generate_ctx()
 
-        regs[i] = train_comuna(i, ctx, train_ratio)
+    nombres_comunas = list( contexto['casos_nuevos'].drop(columns=['san pedro']) )
+    # Gen df para entrenar cada modelo.
+    df_comunas = { i:create_dataframe(i, contexto) for i in nombres_comunas }
+    # Split entre train y test data.
+    splits_comunas  = { i: split_data(i, j) for i, j in df_comunas.items() }
+    # Entrenamiento de los modelos
+    modelos_comunas = {
+        c : train_model(MLPRegressor(random_state=1, max_iter=500),*i, *j) for c, (i, j) in splits_comunas.items() 
+        # c:train_model(LinearRegression(),*i, *j) for c, (i, j) in splits_comunas.items() 
+    }
 
-    return regs
+    # Ej. 1 - Predict de todos los datos
+    print(len(modelos_comunas['santiago'].predict(splits_comunas['santiago'][1][0])))
+
+    # Ej. 2 - Predict de una fila
+    print(len(modelos_comunas['santiago'].predict([ splits_comunas['santiago'][1][0].iloc[0].values ])))
+
