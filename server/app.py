@@ -42,8 +42,18 @@ class DataFromDay(Resource):
 
         return results
         
+class Dates(Resource):
+    def get(self):
+        
+        all_dates = ctx['casos_nuevos'].index
+        all_dates = all_dates.strftime("%Y-%m-%d").tolist()
+        perc = -(int(0.4 * len(all_dates)))
+        dates = all_dates[perc:]
+        return dates
+        #return []
 
 api.add_resource(DataFromDay, '/datafromday')
+api.add_resource(Dates, '/predictdates')
 
 if __name__ == '__main__':
     download_data()
