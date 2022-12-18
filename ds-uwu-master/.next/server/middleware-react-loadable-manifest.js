@@ -1,0 +1,1 @@
+self.__REACT_LOADABLE_MANIFEST={"index.js -> @react-jvectormap/core":{"id":"index.js -> @react-jvectormap/core","files":["static/chunks/node_modules_react-jvectormap_core_dist_index_js.js"]}}

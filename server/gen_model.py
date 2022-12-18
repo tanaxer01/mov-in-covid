@@ -9,7 +9,7 @@ def train_comuna(nombre, ctx, train_ratio=0.4):
         "previos_contagios": (ctx['casos_nuevos'])[nombre].shift(),
         "pcrs_realizados":   ctx['pcrs_realizados'],
         "camas_ocupadas":    ctx['camas_criticas'].ocupados,
-        "variacion_salidas": (ctx['IM_salida_comuna'])[nombre],
+        "variacion_salidas": (ctx['im_salida'])[nombre],
         "paso_comuna":       (ctx['paso_a_paso'])[nombre]
     }).iloc[1:]
 
