@@ -6,7 +6,7 @@ import pandas as pd
 from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.linear_model    import LinearRegression
 # from sklearn.neural_network  import MLPRegressor
-from gen_data import generate_ctx
+from get_data import generate_ctx
 
 
 def train_model(regr, x_vals, y_vals, test_size = 0.6):
@@ -14,7 +14,6 @@ def train_model(regr, x_vals, y_vals, test_size = 0.6):
     x_train, x_test, y_train, y_test = train_test_split(
         x_vals, y_vals, test_size=test_size, random_state=42
     )
-    
     regr.fit(x_train, y_train)
 
     scores = cross_val_score(regr, x_test, y_test, cv=10)
