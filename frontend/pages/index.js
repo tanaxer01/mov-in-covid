@@ -72,6 +72,10 @@ export default function Home() {
   const [dataFromDay, setDataFromDay] = useState(null);
   const [dates, setDates] = useState([]);
   const [showDate, setShowDate] = useState(false)
+  const [showComune, setShowComune] = useState(false);
+  const [comune, setComune] = useState(false)
+  const [fetchComune, setFetchComune] = useState(false);
+  const [dataBarcharts, setDataBarcharts] = useState([]);
   useEffect(() => {
     axios.get('http://localhost:5000/predictdates')
   .then(function (response) {
@@ -81,13 +85,23 @@ export default function Home() {
   .catch(function (error) {
     console.log(error);
   })
+
+  axios.get('http://localhost:5000/comunas')
+  .then((res) => {
+    console.log(res.data)
+    setShowComune(true)
+    res.data.forEach((ele,i) => {
+      const first = ele.charAt(0).toUpperCase()
+      const rest = ele.slice(1)
+      res.data[i] = first + rest
+    })
+    setFetchComune(res.data)
+  })
+  .catch((err)=> {
+    console.log(err)
+  })
   }, [])
 
- 
-  const [showComponent, setShowComponent] = useState([
-    {component:  <ByDate state={date} setState={setDate} dates={dates}/>, name: "by_date", select: true},
-    
-   ]) 
 
    const regionStyle = {
     initial: {
@@ -116,27 +130,13 @@ export default function Home() {
     },]
   }
 
-  const componentToRender = (e)=>{
-    const {name} = e.target;
-    const aux = [...showComponent]
-    aux.forEach(ele => {
-      (ele.name === name) ? ele.select = true : ele.select = false
-    })
-    setShowComponent(aux);
-  }
 
   const dataToRender = (val) => {
     setShowGraph(val);
   }
 
-  const sendData = async (e) => {
+  const sendDataGeo = async (e) => {
     e.preventDefault();
-    let data;
-    showComponent.forEach(ele => {
-      if(ele.name === "by_date"){
-        data = {fecha: "xd"}
-      }
-    })
     setSpinner(true);
     axios.get(`http://localhost:5000/datafromday?fecha=${date}`)
   .then(function (response) {
@@ -169,12 +169,39 @@ export default function Home() {
     setSpinner(false);
     console.log(error);
   })
+
+  }
+
+  const sendDataLine = async(e)=> {
+    e.preventDefault();
+    setSpinner(true);
+    axios.get(`http://localhost:5000/alldata?comuna=${comune}`)
+    .then(function (response) {
+      console.log(response)
+      setSpinner(false);
+      let dataFinal = [];
+      let min = Number.MIN_VALUE;
+      Object.keys(response.data).forEach(ele => {
+        const obj = {date: ele, value: response.data[ele]}
+        dataFinal.push(obj);
+        if(obj.value < min){
+          min = obj.value
+        }
+      })
+      dataFinal.forEach(ele => {
+        ele.value = ele.value + (min * -1)
+      })
+      setDataBarcharts(dataFinal)
+    })
+    .catch((err) => {
+      console.log(err)
+    })
   }
 
   return (
     <Container >
       <Grid container spacing={2} >
-        <Grid sx={{display: "flex", alignItems: "center", mt:5}} item xs={12} xl={6} md={12} lg={6} >
+        <Grid sx={{display: "flex", alignItems: "center", mt:5}} item xs={12} xl={12} md={12} lg={12} >
          {
           (spinner) ? (<Box sx={{ width: '100%' }}>
           <LinearProgress />
@@ -186,14 +213,14 @@ export default function Home() {
                   Geographical
                 </Button>
                 <Button  underline="hover" color="inherit" onClick={() => dataToRender(false)} >
-                  Bar graph
+                  Line graph
                 </Button>
               </Breadcrumbs>
               </div>
         
         
             
-              {(showGraph) ? ( <div style={{width: "600px", height: "600px",}}>
+              {(showGraph) ? ( <div style={{width: "1000px", height: "600px",}}>
               <VectorMap
                 map={rmMill}
                 backgroundColor="transparent"
@@ -203,28 +230,29 @@ export default function Home() {
                 regionStyle={regionStyle}
                 series={series}
               />
-              </div>) : (<BarCharts/>)}
+              </div>) : (<BarCharts data={dataBarcharts}/>)}
             
             
             </Box>)
          }
         </Grid>
-        <Grid  sx={{mt:5}} item xs={12} xl={6} md={12} lg={6}>
+        <Grid  sx={{mt:5}} item xs={12} xl={12} md={12} lg={12}>
           
-          <div role="presentation" >
-            <Breadcrumbs sx={{mb: 3}} aria-label="breadcrumb">
-              <Button name="by_date" underline="hover" color="inherit" onClick={componentToRender} >
-                By date
-              </Button>
-            </Breadcrumbs>
-          </div>
-          { showDate && <ByDate state={date} setState={setDate} dates={dates}/>}
+        
+          { 
+          
+            (showGraph) ? (showDate && <ByDate state={date} setState={setDate} dates={dates} label="Date"/>)
+            : (showComune && <ByDate state={comune} setState={setComune} dates={fetchComune} label="Comune"/>)
+          
+          
+          }
           <div style={{height: "3rem",display: "flex", justifyContent: "end", mt:5}}>
-            <Button sx={{mt:4, p: 2}} variant="contained"  onClick={sendData}>refresh</Button>
+            <Button sx={{mt:4, p: 2}} variant="contained"  onClick={(showGraph) ? sendDataGeo : sendDataLine}>refresh</Button>
           </div>
            
         </Grid>
       </Grid>
+    
     </Container>
   )
 }

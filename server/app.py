@@ -30,8 +30,33 @@ class Dates(Resource):
         dates = all_dates.strftime("%Y-%m-%d").tolist()
         return dates, {'Access-Control-Allow-Origin': '*'}
 
+class AllData(Resource):
+    def get(self):
+        args = request.args
+        if (args['comuna'] == ''):
+            return 400
+
+        # Array of results: Dates
+        all_dates = splits_comunas['santiago'][1][0].index
+        dates = all_dates.strftime("%Y-%m-%d").tolist()
+
+        # Array of results: Values
+        values = modelos_comunas[args['comuna']].predict(splits_comunas[args['comuna']][1][0])
+
+        results = {}
+        for i in range(len(values)):
+            results[dates[i]] = values[i]
+        
+        return results, {'Access-Control-Allow-Origin': '*'}
+
+class Comunas(Resource):
+    def get(self):
+        return nombres_comunas, {'Access-Control-Allow-Origin': '*'}
+
 api.add_resource(DataFromDay, '/datafromday')
+api.add_resource(AllData, '/alldata')
 api.add_resource(Dates, '/predictdates')
+api.add_resource(Comunas, '/comunas')
 
 if __name__ == '__main__':
     download_data()
