@@ -16,11 +16,13 @@ def create_dataframe(comuna, ctx):
     '''
     todas_comunas = list( ctx['casos_nuevos'].drop(columns=[comuna, 'san pedro']) )
 
-    movi = {"movi-"+i:  ctx["im_salida"][i].shift(periods=20)  for i in todas_comunas + [comuna]}
-    paso = {"paso-"+i:  ctx["paso_a_paso"][i].shift(periods=4) for i in todas_comunas + [comuna]}
+    movi = {"movi-"+i:  ctx["im_salida"][i].shift(periods=1)  for i in todas_comunas + [comuna]}
+    # inim = {"inim-"+i:  ctx["im_entrada_prom"][i].shift(periods=1)  for i in todas_comunas + [comuna]}
+    paso = {"paso-"+i:  ctx["paso_a_paso"][i].shift(periods=1) for i in todas_comunas + [comuna]}
     covd = {"covd-"+i : ctx["casos_nuevos"][i].shift() for i in todas_comunas }
     cnst = {
         "pcrs_realizados": ctx["pcrs_realizados"],
+        "camas_criticas":  ctx["camas_criticas"].ocupados,
         "covd-"+comuna:  ctx["casos_nuevos"][comuna]
     }
 
