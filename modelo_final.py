@@ -26,6 +26,7 @@ def create_dataframe(comuna, ctx):
     covd = {"covd-"+i : ctx["casos_nuevos"][i].shift() for i in todas_comunas }
     cnst = {
         "pcrs_realizados": ctx["pcrs_realizados"],
+        "camas_criticas":  ctx["camas_criticas"].ocupados,
         "covd-"+comuna:  ctx["casos_nuevos"][comuna]
     }
 
@@ -103,7 +104,13 @@ if __name__ == "__main__":
     sort_data(splits_comunas)
 
     # Ej. 1 - Predict de todos los datos
-    print(len(modelos_comunas['santiago'].predict(splits_comunas['santiago'][1][0])))
+    # print(len(modelos_comunas['santiago'].predict(splits_comunas['santiago'][1][0])))
 
     # Ej. 2 - Predict de una fila
-    print(len(modelos_comunas['santiago'].predict([ splits_comunas['santiago'][1][0].iloc[0].values ])))
+    # print(len(modelos_comunas['santiago'].predict([ splits_comunas['santiago'][1][0].iloc[0].values ])))
+
+    print("-----")
+    print(modelos_comunas['santiago'].rank_)
+    print(modelos_comunas['santiago'].coef_)
+    
+    print(splits_comunas['santiago'][1][0].columns)
