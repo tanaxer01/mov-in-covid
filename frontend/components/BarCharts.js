@@ -46,13 +46,10 @@ const data = [
   },
 ];
 
-export default class BarCharts extends PureComponent {
-  static demoUrl = 'https://codesandbox.io/s/simple-line-chart-kec3v';
-
-  render() {
-
+export default function Barcharts ({data}) {
+  
     return (
-      <div style={{width: "570px" , height: "570px", backgroundColor: "white"}}>
+      <div style={{width: "1100px" , height: "570px", backgroundColor: "white"}}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
             width={500}
@@ -66,17 +63,15 @@ export default class BarCharts extends PureComponent {
             }}
           >
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="name" />
+            <XAxis dataKey="date" />
             <YAxis />
             <Tooltip />
             <Legend />
-            <Line type="monotone" dataKey="pv" stroke="#8884d8" activeDot={{ r: 8 }} />
-            <Line type="monotone" dataKey="uv" stroke="#82ca9d" />
+            <Line type="monotone" dot={false}dataKey="value" stroke="#8884d8" activeDot={{ r: 8 }} />
           </LineChart>
         </ResponsiveContainer>
         </div>
     );
   }
-}
 
 
